@@ -22,25 +22,29 @@
   (intern (string-upcase
 	   (str:replace-all "_" "-" (ppcre:regex-replace-all "(/|{|})" match "")))))
 
-;; TODO rework this to accept slots with nothing but slot name
-;;  and turns it into a full slot definition
-(defmacro defjsonclass (name supertypes &rest options)
+(defmacro defjsonclass (name supertypes slots &rest options)
   `(defclass ,name ,supertypes
-     ,(loop for slot in (car options)
-	    if (or (member :json-type slot)
-		   (member :json-key slot))
-	      collect slot
+     ,(loop for slot in slots
+	    if (listp slot)
+	      collect
+	    `(,(car slot)
+	      ,@(unless (member :initarg slot)
+		  (list :initarg (intern (string (car slot)) :keyword)))
+	      ,@(unless (member :json-type slot)
+		  (list :json-type :any))
+	      ,@(unless (member :json-key slot)
+		  (list :json-key (if (member :underscore slot)
+				      (symbol-to-snake-case (car slot))
+				      (symbol-to-camel-case (car slot)))))
+	      ,@(remove :underscore (cdr slot)))
 	    else
 	      collect
-	    `(,@(remove :underscore slot)
-	      :initarg ,(car slot)
-	      :json-type :any
-	      :json-key ,(if (member :underscore slot)
-			     (symbol-to-snake-case (car slot))
-			     (symbol-to-camel-case (car slot)))))
-     (:metaclass json-mop:json-serializable-class)
-     ,@(cdr options)))
-	     
+	    `(,slot :initarg ,(intern (string slot) :keyword)
+		    :json-type :any
+		    :json-key ,(symbol-to-camel-case slot)))
+     ,@options
+     (:metaclass json-mop:json-serializable-class)))
+
 (defmacro defplug (domain path &key return-type (methods (list :get)))
   (let ((converted-path (str:replace-all "/" "-"
 					 (ppcre:regex-replace-all "/{\\w+}/?"

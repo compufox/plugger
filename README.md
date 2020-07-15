@@ -1,7 +1,9 @@
 # plugger
 ### _ava fox_
 
-This is a project to do ... something.
+writing methods for JSON APIs is dull and repetitive
+
+this library aims to ease some of that pain by doing most of the heavy lifting for you
 
 ## License
 

@@ -6,6 +6,6 @@
   :license  "BSD 3-Clause"
   :version "0.0.1"
   :serial t
-  :depends-on (#:dexador #:cl-json #:closer-mop)
+  :depends-on (#:dexador #:json-mop)
   :components ((:file "package")
                (:file "plugger")))

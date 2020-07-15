@@ -1,4 +1,6 @@
 ;;;; package.lisp
 
 (defpackage #:plugger
-  (:use #:cl))
+  (:use #:cl)
+  (:export :*api-root*
+	   :defplug))

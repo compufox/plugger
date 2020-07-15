@@ -18,6 +18,10 @@
     (format nil "~{~(~a~)~^_~}"
 	    string-list)))
 
+(defun match-to-symbol (match)
+  (intern (string-upcase
+	   (str:replace-all "_" "-" (ppcre:regex-replace-all "(/|{|})" match "")))))
+
 ;; TODO rework this to accept slots with nothing but slot name
 ;;  and turns it into a full slot definition
 (defmacro defjsonclass (name supertypes &rest options)
@@ -37,30 +41,35 @@
      (:metaclass json-mop:json-serializable-class)
      ,@(cdr options)))
 	     
-
-(defmacro defplug (domain path &key return-type (methods (list :get)) trailing-argument)
+(defmacro defplug (domain path &key return-type (methods (list :get)))
   `(progn
-     ,@(loop with converted-path = (str:replace-all "/" "-" path)
+     ,@(loop with converted-path = (str:replace-all "/" "-"
+						    (ppcre:regex-replace-all "/{\\w+}/"
+									     path
+									     "-"))
+	     with arguments = (mapcar #'match-to-symbol
+				      (ppcre:all-matches-as-strings "/{\\w+}/"
+								    path))
 	     for method in methods
 	     for func = (intern (string method) :dexador)
 	     collect 
 	     `(defun ,(intern (string-upcase
 			       (str:concat (string method) "-"
 					   converted-path)))
-		  ,(append nil
-		    (when trailing-argument
-		      '(argument))
-		    (when (or (eql method :post)
-			      (eql method :patch))
-		      '(data))
-		    '(&key (root *api-root*) headers basic-auth))
-		(json-mop:json-to-clos ,(append `(funcall #',func)
-						`((str:concat ,domain root ,path
-							      ,(when (and trailing-argument
-									   (eql method :get))
-								  '(format nil "/~A" argument))))
-						'(:headers headers :basic-auth basic-auth)
-						(unless (or (eql method :delete)
-							    (eql method :get))
-						  '(:content data)))
-				       ',return-type)))))
+		  (,@arguments 
+		   ,@(when (or (eql method :post)
+			       (eql method :patch))
+		       '(data))
+		   &key (root *api-root*) headers basic-auth)
+		(json-mop:json-to-clos
+		 (funcall #',func
+			  (str:concat ,domain root
+				      (format nil ,(ppcre:regex-replace-all "{\\w+}"
+									    path
+									    "~A")
+					      ,@arguments))
+			  :headers headers :basic-auth basic-auth
+			  ,@(unless (or (eql method :delete)
+					(eql method :get))
+			      '(:content data)))
+		 ',return-type)))))

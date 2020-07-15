@@ -2,10 +2,11 @@
 
 (in-package #:plugger)
 
-(defvar *api-root* "/api/v1/")
+(defvar *api-root* "/api/v1/"
+  "the root of the API path, after the main domain name")
 
 (defun symbol-to-camel-case (symbol)
-  "converts SYMBOL to a string in camel case"
+  "converts SYMBOL to a string in camelCase"
   (declare (ftype (function (symbol) string) symbol-to-camel-case))
   (let ((string-list (str:split #\- (string symbol))))
     (format nil "~(~a~)~{~@(~a~)~}"
@@ -13,12 +14,15 @@
 	    (rest string-list))))
 
 (defun symbol-to-snake-case (symbol)
+  "converts SYMBOL to a string in snake_case"
   (declare (ftype (function (symbol) string) symbol-to-snake-case))
   (let ((string-list (str:split #\- (string symbol))))
     (format nil "~{~(~a~)~^_~}"
 	    string-list)))
 
 (defun match-to-symbol (match)
+  "converts a string, MATCH, to a symbol"
+  (declare (ftype (function (string) symbol) match-to-symbol))
   (intern (string-upcase
 	   (str:replace-all "_" "-" (ppcre:regex-replace-all "(/|{|})" match "")))))
 

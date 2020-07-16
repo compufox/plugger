@@ -40,12 +40,15 @@
 		  (list :json-key (if (member :underscore slot)
 				      (symbol-to-snake-case (car slot))
 				      (symbol-to-camel-case (car slot)))))
+	      ,@(unless (member :accessor slot)
+		  (list :accessor (car slot)))
 	      ,@(remove :underscore (cdr slot)))
 	    else
 	      collect
 	    `(,slot :initarg ,(intern (string slot) :keyword)
 		    :json-type :any
-		    :json-key ,(symbol-to-camel-case slot)))
+		    :json-key ,(symbol-to-camel-case slot)
+		    :accessor ,slot))
      ,@options
      (:metaclass json-mop:json-serializable-class)))
 

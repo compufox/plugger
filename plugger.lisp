@@ -49,43 +49,49 @@
      ,@options
      (:metaclass json-mop:json-serializable-class)))
 
-(defmacro defplug (domain path &key return-type (methods (list :get)))
+(defmacro defplugs (domain &rest plugs)
+  `(progn
+     ,@(loop for plug in plugs
+	     collect
+	     `(defplug ,domain ,@plug))))
+
+(defmacro defplug (domain path return-type &key (methods (list :get)))
   (let ((converted-path (str:replace-all "/" "-"
 					 (ppcre:regex-replace-all "/{\\w+}/?"
 								  path
-								  "-"))))
-  `(progn
-     ,@(loop with arguments = (mapcar #'match-to-symbol
-				      (ppcre:all-matches-as-strings "/{\\w+}/?"
-								    path))
-	     for method in methods
-	     for func = (intern (string method) :dexador)
-	     collect 
-	     `(defun ,(intern (string-upcase
-			       (str:concat (string method) "-"
-					   (if (str:ends-with-p "-" converted-path)
-					       (subseq converted-path 0 (1- (length converted-path)))
-					       converted-path))))
-		  (,@arguments 
-		   ,@(when (or (eql method :post)
-			       (eql method :patch))
-		       '(data))
-		   &key (root *api-root*) headers basic-auth)
-		(let ((response (funcall #',func
-					 (str:concat ,domain root
-						     (format nil ,(ppcre:regex-replace-all "{\\w+}?"
-											   path
-											   "~A")
-							     ,@arguments))
-					 :headers headers :basic-auth basic-auth
-					 ,@(unless (or (eql method :delete)
-						       (eql method :get))
-					     '(:content data)))))
-		  (,@(if (listp return-type)
-			 '(map 'list)
-			 '(funcall))
-		   #'(lambda (r)
-		       (json-mop:json-to-clos r ',(if (listp return-type)
-						      (car (last return-type))
-						      return-type)))
-		   (yason:parse response))))))))
+								  "-")))
+	(arguments (mapcar #'match-to-symbol
+			   (ppcre:all-matches-as-strings "/{\\w+}/?"
+							 path))))
+    `(progn
+       ,@(loop for method in methods
+	       for func = (intern (string method) :dexador)
+	       collect 
+	       `(defun ,(intern (string-upcase
+				 (str:concat (string method) "-"
+					     (if (str:ends-with-p "-" converted-path)
+						 (subseq converted-path 0 (1- (length converted-path)))
+						 converted-path))))
+		    (,@arguments 
+		     ,@(when (or (eql method :post)
+				 (eql method :patch))
+			 '(data))
+		     &key (root *api-root*) headers basic-auth)
+		  (let ((response (funcall #',func
+					   (str:concat ,domain root
+						       (format nil ,(ppcre:regex-replace-all "{\\w+}?"
+											     path
+											     "~A")
+							       ,@arguments))
+					   :headers headers :basic-auth basic-auth
+					   ,@(unless (or (eql method :delete)
+							 (eql method :get))
+					       '(:content data)))))
+		    (,@(if (listp return-type)
+			   '(map 'list)
+			   '(funcall))
+		     #'(lambda (r)
+			 (json-mop:json-to-clos r ',(if (listp return-type)
+							(car (last return-type))
+							return-type)))
+		     (yason:parse response))))))))

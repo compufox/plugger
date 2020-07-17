@@ -4,4 +4,5 @@
   (:use #:cl)
   (:export :*api-root*
 	   :defjsonclass
+	   :defplugs
 	   :defplug))

@@ -85,9 +85,7 @@ PATH can contain variables which, when expanded into a function, will be argumen
 	       collect 
 	       `(defun ,(intern (string-upcase
 				 (str:concat (string method) "-"
-					     (if (str:ends-with-p "-" converted-path)
-						 (subseq converted-path 0 (1- (length converted-path)))
-						 converted-path))))
+					     (ppcre:regex-replace "-$" converted-path ""))))
 		    (,@arguments 
 		     ,@(when (or (eql method :post)
 				 (eql method :patch))

@@ -2,6 +2,8 @@
 
 (in-package #:plugger)
 
+(defvar +variable-regex+ "{.+?}")
+
 (defvar *api-root* "/api/v1/"
   "the root of the API path, after the main domain name")
 
@@ -19,6 +21,26 @@
   (let ((string-list (str:split #\- (string symbol))))
     (format nil "~{~(~a~)~^_~}"
 	    string-list)))
+
+(defun spec-to-function-name (spec)
+  "converts url SPEC into a suitable name for a function
+
+removes trailing -
+removes all /
+removes all =
+converts ? to -by-
+converts & to and-
+converts any \{variables\} to -"
+  (declare (ftype (function (string) string) spec-to-function-name))
+  (str:replace-all "=" ""
+    (str:replace-all "?" "-by-"
+      (str:replace-all "&" "and-"
+        (str:replace-all "/" ""
+	  (ppcre:regex-replace "-$"
+	    (ppcre:regex-replace-all +variable-regex+
+				     spec
+				     "-")
+	    ""))))))
 
 (defun match-to-symbol (match)
   "converts a string, MATCH, to a symbol"
@@ -72,20 +94,18 @@ each PLUG in PLUGS is a list matching the signature for defplug minus DOMAIN"
   "define a plug for PATH on DOMAIN. RETURN-TYPE is a class name defined by DEFJSONCLASS
 METHODS is a list representing any HTTP methods the plug should expand
 PATH can contain variables which, when expanded into a function, will be arguments to the function"
-  (let ((converted-path (str:replace-all "/" "-"
-					 (ppcre:regex-replace-all "/{\\w+}/?"
-								  path
-								  "-")))
+  (let ((converted-path (spec-to-function-name path))
 	(arguments (mapcar #'match-to-symbol
-			   (ppcre:all-matches-as-strings "/{\\w+}/?"
+			   (ppcre:all-matches-as-strings +variable-regex+
 							 path))))
     `(progn
        ,@(loop for method in methods
 	       for func = (intern (string method) :dexador)
 	       collect 
 	       `(defun ,(intern (string-upcase
-				 (str:concat (string method) "-"
-					     (ppcre:regex-replace "-$" converted-path ""))))
+				 (concatenate 'string
+					      (string method) "-"
+					      converted-path)))
 		    (,@arguments 
 		     ,@(when (or (eql method :post)
 				 (eql method :patch))
@@ -93,7 +113,7 @@ PATH can contain variables which, when expanded into a function, will be argumen
 		     &key (root *api-root*) headers basic-auth)
 		  (let ((response (funcall #',func
 					   (str:concat ,domain root
-						       (format nil ,(ppcre:regex-replace-all "{\\w+}?"
+						       (format nil ,(ppcre:regex-replace-all +variable-regex+
 											     path
 											     "~A")
 							       ,@arguments))

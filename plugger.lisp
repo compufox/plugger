@@ -48,7 +48,7 @@ converts any \{variables\} to -"
   (intern (string-upcase
 	   (str:replace-all "_" "-" (ppcre:regex-replace-all "(/|{|})" match "")))))
 
-(defmacro defjsonclass (name supertypes slots &rest options)
+(defmacro defjsonclass (name superclasses slots &rest options)
   "wrapper around defclass to quickly define json objects, automatically setting metaclass to json-serializable-class
 
 if a slot is just a symbol INITARG, ACCESSOR, JSON-TYPE, and JSON-KEY is automatically supplied
@@ -56,7 +56,7 @@ providing any of those options will override the automatically generated default
 
 JSON-KEY defaults to a camelCase string representation of the slot name
 JSON-TYPE defaults to :any"
-  `(defclass ,name ,supertypes
+  `(defclass ,name ,superclasses
      ,(loop for slot in slots
 	    if (listp slot)
 	      collect
@@ -90,7 +90,7 @@ each PLUG in PLUGS is a list matching the signature for defplug minus DOMAIN"
 	     collect
 	     `(defplug ,domain ,@plug))))
 
-(defmacro defplug (domain path return-type &key (methods (list :get)))
+(defmacro defplug (domain path return-type &key (methods '(:get)))
   "define a plug for PATH on DOMAIN. RETURN-TYPE is a class name defined by DEFJSONCLASS
 METHODS is a list representing any HTTP methods the plug should expand
 PATH can contain variables which, when expanded into a function, will be arguments to the function"

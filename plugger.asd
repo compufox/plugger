@@ -8,4 +8,5 @@
   :serial t
   :depends-on (#:dexador #:json-mop #:str #:cl-ppcre)
   :components ((:file "package")
-               (:file "plugger")))
+               (:file "plugger"))
+  :in-order-to ((test-op (test-op "plugger-test"))))

@@ -6,7 +6,7 @@
   :license  "BSD 3-Clause"
   :version "0.0.1"
   :serial t
-  :depends-on (#:dexador #:json-mop #:str #:cl-ppcre)
+  :depends-on (#:dexador #:json-mop #:str #:cl-ppcre #:cl-change-case)
   :components ((:file "package")
                (:file "plugger"))
   :in-order-to ((test-op (test-op "plugger-test"))))

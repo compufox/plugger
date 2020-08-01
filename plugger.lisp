@@ -7,21 +7,6 @@
 (defvar *api-root* "/api/v1/"
   "the root of the API path, after the main domain name")
 
-(defun symbol-to-camel-case (symbol)
-  "converts SYMBOL to a string in camelCase"
-  (declare (ftype (function (symbol) string) symbol-to-camel-case))
-  (let ((string-list (str:split #\- (string symbol))))
-    (format nil "~(~a~)~{~@(~a~)~}"
-	    (first string-list)
-	    (rest string-list))))
-
-(defun symbol-to-snake-case (symbol)
-  "converts SYMBOL to a string in snake_case"
-  (declare (ftype (function (symbol) string) symbol-to-snake-case))
-  (let ((string-list (str:split #\- (string symbol))))
-    (format nil "~{~(~a~)~^_~}"
-	    string-list)))
-
 (defun spec-to-function-name (spec)
   "converts url SPEC into a suitable name for a function
 
@@ -67,8 +52,8 @@ JSON-TYPE defaults to :any"
 		  (list :json-type :any))
 	      ,@(unless (member :json-key slot)
 		  (list :json-key (if (member :underscore slot)
-				      (symbol-to-snake-case (car slot))
-				      (symbol-to-camel-case (car slot)))))
+				      (snake-case (string (car slot)))
+				      (camel-case (string (car slot))))))
 	      ,@(unless (member :accessor slot)
 		  (list :accessor (car slot)))
 	      ,@(remove :underscore (cdr slot)))
@@ -76,7 +61,7 @@ JSON-TYPE defaults to :any"
 	      collect
 	    `(,slot :initarg ,(intern (string slot) :keyword)
 		    :json-type :any
-		    :json-key ,(symbol-to-camel-case slot)
+		    :json-key ,(camel-case (string slot))
 		    :accessor ,slot))
      ,@options
      (:metaclass json-mop:json-serializable-class)))
@@ -105,7 +90,7 @@ PATH can contain variables which, when expanded into a function, will be argumen
 	       `(defun ,(intern (string-upcase
 				 (concatenate 'string
 					      (string method) "-"
-					      converted-path)))
+					      (param-case converted-path))))
 		    (,@arguments 
 		     ,@(when (or (eql method :post)
 				 (eql method :patch))

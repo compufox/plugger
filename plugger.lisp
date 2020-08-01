@@ -39,33 +39,48 @@ converts any \{variables\} to -"
 if a slot is just a symbol INITARG, ACCESSOR, JSON-TYPE, and JSON-KEY is automatically supplied
 providing any of those options will override the automatically generated default
 
+if :EXPORT-ACCESSORS is provided in OPTIONS all slot readers/writers/accessors will be exported from the package
+
 JSON-KEY defaults to a camelCase string representation of the slot name
 JSON-TYPE defaults to :any"
-  `(defclass ,name ,superclasses
-     ,(loop for slot in slots
-	    if (listp slot)
-	      collect
-	    `(,(car slot)
-	      ,@(unless (member :initarg slot)
-		  (list :initarg (intern (string (car slot)) :keyword)))
-	      ,@(unless (member :json-type slot)
-		  (list :json-type :any))
-	      ,@(unless (member :json-key slot)
-		  (list :json-key (if (member :underscore slot)
-				      (snake-case (string (car slot)))
-				      (camel-case (string (car slot))))))
-	      ,@(unless (member :accessor slot)
-		  (list :accessor (car slot)))
-	      ,@(remove :underscore (cdr slot)))
-	    else
-	      collect
-	    `(,slot :initarg ,(intern (string slot) :keyword)
-		    :json-type :any
-		    :json-key ,(camel-case (string slot))
-		    :accessor ,slot))
-     ,@options
-     (:metaclass json-mop:json-serializable-class)))
-
+  `(prog1
+       (defclass ,name ,superclasses
+	 ,(loop for slot in slots
+		if (listp slot)
+		  collect
+		`(,(car slot)
+		  ,@(unless (member :initarg slot)
+		      (list :initarg (intern (string (car slot)) :keyword)))
+		  ,@(unless (member :json-type slot)
+		      (list :json-type :any))
+		  ,@(unless (member :json-key slot)
+		      (list :json-key (if (member :underscore slot)
+					  (snake-case (string (car slot)))
+					  (camel-case (string (car slot))))))
+		  ,@(unless (or (member :accessor slot)
+				(member :reader slot)
+				(member :writer slot))
+		      (list :accessor (car slot)))
+		  ,@(remove :underscore (cdr slot)))
+		else
+		  collect
+		`(,slot :initarg ,(intern (string slot) :keyword)
+			:json-type :any
+			:json-key ,(camel-case (string slot))
+			:accessor ,slot))
+	 ,@(remove :export-accessors options :key #'car)
+	 (:metaclass json-mop:json-serializable-class))
+     ,(when (member :export-accessors options :key #'car)
+	`(export
+	  ',(loop for slot in slots
+		  if (listp slot)
+		    collect (or (getf (cdr slot) :accessor)
+				(getf (cdr slot) :reader)
+				(getf (cdr slot) :writer)
+				(car slot))
+		  else
+		    collect slot)))))
+  
 (defmacro defplugs (domain &rest plugs)
   "run defplug using a common domain
 

@@ -90,22 +90,24 @@ each PLUG in PLUGS is a list matching the signature for defplug minus DOMAIN"
 	     collect
 	     `(defplug ,domain ,@plug))))
 
-(defmacro defplug (domain path return-type &key (methods '(:get)))
+(defmacro defplug (domain path return-type &key (methods '(:get)) fn-name)
   "define a plug for PATH on DOMAIN. RETURN-TYPE is a class name defined by DEFJSONCLASS
 METHODS is a list representing any HTTP methods the plug should expand
-PATH can contain variables which, when expanded into a function, will be arguments to the function"
-  (let ((converted-path (spec-to-function-name path))
-	(arguments (mapcar #'match-to-symbol
+PATH can contain variables which, when expanded into a function, will be arguments to the function
+
+if FN-NAME is provided that name is used instead of a function name being generated from the PATH"
+  (let ((arguments (mapcar #'match-to-symbol
 			   (ppcre:all-matches-as-strings +variable-regex+
 							 path))))
     `(progn
        ,@(loop for method in methods
 	       for func = (intern (string method) :dexador)
 	       collect 
-	       `(defun ,(intern (string-upcase
-				 (concatenate 'string
-					      (string method) "-"
-					      (param-case converted-path))))
+	       `(defun ,(or fn-name
+			    (intern (string-upcase
+				     (concatenate 'string
+						  (string method) "-"
+						  (param-case (spec-to-function-name path))))))
 		    (,@arguments 
 		     ,@(when (or (eql method :post)
 				 (eql method :patch))

@@ -113,7 +113,8 @@ if FN-NAME is provided that name is used instead of a function name being genera
 				 (eql method :patch))
 			 '(data))
 		     &key (root *api-root*) headers basic-auth)
-		  (let ((response (funcall #',func
+		  (let ((yason:*parse-json-arrays-as-vectors* t)
+			(response (funcall #',func
 					   (str:concat ,domain root
 						       (format nil ,(ppcre:regex-replace-all +variable-regex+
 											     path
